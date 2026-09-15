@@ -1,0 +1,110 @@
+[application]
+log_level = "INFO"
+
+[camera]
+enabled = true
+required = false
+source = "camera"
+device = 0
+video_path = ""
+loop_video = false
+width = 640
+height = 480
+capture_fps = 30
+reconnect_delay_seconds = 2.0
+max_reconnect_delay_seconds = 30.0
+preview = false
+
+[perception]
+enabled = true
+detector = "nanodet"
+model_path = "models/object_detection_nanodet_2022nov.onnx"
+inference_fps = 5
+confidence_threshold = 0.40
+nms_threshold = 0.5
+tracking_iou_threshold = 0.3
+tracking_max_missed_updates = 50
+tracking_reappearance_distance_pixels = 240.0
+allowed_labels = []
+
+[diagnostics]
+metrics_enabled = true
+
+[awareness]
+enabled = true
+cooldown_seconds = 20.0
+person_stability_frames = 3
+
+[output]
+jsonl_enabled = true
+jsonl_path = "outputs/perception.jsonl"
+log_seen_objects = false
+
+[memory]
+enabled = true
+database_path = "data/object_memory.sqlite3"
+
+[conversation]
+model = "qwen3:4b-instruct"
+base_url = "http://127.0.0.1:11434"
+timeout_seconds = 30
+max_history_messages = 16
+
+[location_learning]
+enabled = true
+model = "facebook/dinov2-small"
+store_path = "data/room_embeddings.json"
+sample_count = 12
+sample_interval_seconds = 0.65
+recognition_interval_seconds = 2.0
+minimum_similarity = 0.70
+minimum_margin = 0.04
+
+[room_classifier]
+enabled = true
+model = "qwen3-vl:4b"
+base_url = "http://127.0.0.1:11434"
+interval_seconds = 5.0
+timeout_seconds = 30.0
+confirmation_count = 1
+
+[face_identity]
+enabled = false
+detector_model_path = "models/face_detection_yunet_2023mar.onnx"
+recognizer_model_path = "models/face_recognition_sface_2021dec.onnx"
+database_path = "data/face_profiles.sqlite3"
+inference_fps = 4
+detector_score_threshold = 0.85
+detector_nms_threshold = 0.3
+minimum_face_size_pixels = 70
+recognition_threshold = 0.52
+recognition_margin = 0.08
+cluster_threshold = 0.58
+confirmation_frames = 3
+vote_window_frames = 5
+sample_interval_seconds = 0.6
+sample_diversity_similarity = 0.995
+auto_prompt_samples = 12
+manual_prompt_samples = 5
+prompt_cooldown_seconds = 120
+temporary_ttl_seconds = 600
+max_embeddings_per_profile = 30
+auto_prompt_enabled = true
+
+[speech]
+enabled = false
+engine = "auto"
+rate = 175
+queue_size = 8
+speak_query_answers = true
+
+[speech_input]
+enabled = false
+engine = "vosk"
+model_path = "models/vosk-model-small-en-us-0.15"
+device = -1
+sample_rate = 16000
+block_size = 4000
+timeout_seconds = 8.0
+wake_phrases = ["hey glasses", "okay glasses", "ok glasses", "vs glasses"]
+conversation_window_seconds = 15

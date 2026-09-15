@@ -1,0 +1,25 @@
+:root { color-scheme: dark; --bg:#0b1110; --panel:#121c19; --line:#263630; --text:#eef8f3; --muted:#93a89f; --green:#55df9e; --amber:#f3bf63; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font:15px/1.45 system-ui,-apple-system,sans-serif; }
+main { width:min(1180px,94vw); margin:0 auto; padding:28px 0 48px; }
+header,.panel-title { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+h1 { margin:3px 0 0; font-size:clamp(25px,4vw,42px); } h2 { margin:0; font-size:17px; }
+.eyebrow,.label { color:var(--green); font-size:11px; font-weight:800; letter-spacing:.16em; }
+.pill { border:1px solid var(--line); border-radius:999px; padding:7px 12px; font-weight:700; }
+.pill.ok { color:var(--green); }.pill.warning { color:var(--amber); }
+.layout { display:grid; grid-template-columns:minmax(0,2fr) minmax(240px,1fr); gap:16px; margin-top:24px; }
+.panel { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; }
+.video-wrap { aspect-ratio:4/3; margin-top:13px; background:#020504; border-radius:9px; overflow:hidden; }
+.video-wrap img { width:100%; height:100%; object-fit:contain; display:block; }
+aside { display:grid; gap:16px; align-content:start; }
+dl { margin:12px 0 0; } dl div { display:flex; justify-content:space-between; gap:18px; padding:10px 0; border-top:1px solid var(--line); }
+dt { color:var(--muted); } dd { margin:0; font-weight:700; }
+.detections-panel { margin-top:16px; }.table-wrap { overflow-x:auto; margin-top:10px; }
+table { width:100%; border-collapse:collapse; } th,td { text-align:left; padding:10px 8px; border-top:1px solid var(--line); }
+th { color:var(--muted); font-size:12px; } .empty { color:var(--muted); text-align:center; }.error { color:#ff8d8d; overflow-wrap:anywhere; }
+#updated,#count { color:var(--muted); font-size:13px; }
+.voice-hint { color:var(--muted); font-size:13px; margin:0 0 14px; }
+.voice-row { display:grid; grid-template-columns:90px 1fr; gap:12px; padding:11px 0; border-top:1px solid var(--line); }
+.voice-row span { color:var(--muted); font-size:13px; }
+.voice-row strong { overflow-wrap:anywhere; }
+@media (max-width:760px) { .layout { grid-template-columns:1fr; } }

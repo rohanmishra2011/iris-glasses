@@ -1,0 +1,16 @@
+[application]
+log_level = "INFO"
+
+[camera]
+enabled = true
+required = false
+device = 0
+width = 640
+height = 480
+capture_fps = 30
+reconnect_delay_seconds = 2.0
+max_reconnect_delay_seconds = 30.0
+preview = false
+
+[perception]
+inference_fps = 3

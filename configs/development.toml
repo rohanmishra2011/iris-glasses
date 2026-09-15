@@ -1,0 +1,21 @@
+[application]
+log_level = "DEBUG"
+
+[camera]
+required = false
+preview = true
+
+[diagnostics]
+metrics_enabled = true
+
+[speech]
+enabled = true
+engine = "auto"
+speak_query_answers = true
+
+[speech_input]
+enabled = true
+engine = "vosk"
+
+[face_identity]
+enabled = true
