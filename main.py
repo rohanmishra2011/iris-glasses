@@ -1,4 +1,4 @@
-"""VSGlasses: one USB camera, one YOLO model, voice, memory and dashboard."""
+"""PUPIL: one USB camera, one YOLO model, voice, memory and IMU context."""
 import argparse
 import os
 import time
@@ -12,9 +12,7 @@ from object_database import ObjectDatabase, ObjectObservation
 from stt import WakeWordListener
 from tts import PiperSpeech
 from nlp import answer
-from dashboard.server import DashboardServer
 from shared_state import SharedState
-from system_health import SystemHealthWorker
 from imu import MPU6050Worker
 from vision_context import RoomClassifierWorker
 
@@ -23,9 +21,6 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--camera", type=int, default=0, help="OpenCV USB camera index")
     parser.add_argument("--imgsz", type=int, default=480, help="YOLO inference image size")
-    parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=3000)
-    parser.add_argument("--no-dashboard", action="store_true")
     parser.add_argument("--no-voice", action="store_true")
     parser.add_argument("--no-room", action="store_true", help="Disable Qwen room classification")
     parser.add_argument("--room-model", default="qwen2.5:0.5b-instruct")
@@ -39,16 +34,11 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    state = SharedState(jpeg_quality=70, stream_fps=8)
-    dashboard = None if args.no_dashboard else DashboardServer(state, args.host, args.port)
-    if dashboard is not None:
-        dashboard.start()
-    health_worker = SystemHealthWorker(state)
+    state = SharedState()
     imu_worker = MPU6050Worker(state)
     room_worker = None if args.no_room else RoomClassifierWorker(
         state, model=args.room_model, interval=args.room_interval
     )
-    health_worker.start()
     imu_worker.start()
     if room_worker is not None:
         room_worker.start()
@@ -132,8 +122,8 @@ def main() -> None:
                 state.set_status(camera="warming_up")
                 time.sleep(0.05)
                 continue
-            # The camera is mounted sideways on the glasses. Rotate the
-            # shared frame so YOLO, room inference, and the dashboard agree.
+            # The camera is mounted sideways on the glasses. Rotate the frame
+            # so YOLO and room inference use the same orientation.
             frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
             result = model.predict(frame, conf=0.40, imgsz=args.imgsz, verbose=False)[0]
             observed_at = datetime.now(timezone.utc).isoformat()
@@ -199,15 +189,12 @@ def main() -> None:
         imu_worker.stop()
         if room_worker is not None:
             room_worker.stop()
-        health_worker.stop()
         database.close()
         if camera is not None:
             camera.release()
         if args.preview:
             cv2.destroyAllWindows()
         state.set_status(camera="stopped")
-        if dashboard is not None:
-            dashboard.stop()
 
 
 if __name__ == "__main__":

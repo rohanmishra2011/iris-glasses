@@ -16,8 +16,6 @@ The system is designed to answer questions such as “PUPIL, where is my phone?�
 ├── tts.py                      # Piper speech output
 ├── vision_context.py           # Room-context inference from detected objects
 ├── shared_state.py             # Live shared system state
-├── system_health.py            # Pi system metrics
-├── dashboard/                  # Local browser monitor
 ├── configs/                    # Runtime configuration files
 ├── docs/                       # Architecture, testing, safety and roadmap notes
 ├── hardware/3d-models/         # 3D-printable prototype enclosure files
@@ -48,8 +46,6 @@ source .venv/bin/activate
 python -m pip install -r requirements-pi.txt
 ./run_pi.sh
 ```
-
-The local dashboard can be run separately from `dashboard/server.py` and viewed from the Pi’s local network address.
 
 ## Model files
 
