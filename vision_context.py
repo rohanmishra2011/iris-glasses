@@ -5,21 +5,34 @@ import json, re, threading, time, urllib.request
 class RoomClassifierWorker:
     def __init__(self, state, model="qwen2.5:0.5b-instruct", interval=30.0):
         self.state, self.model, self.interval = state, model, max(5.0, interval)
-        self._objects=None; self._lock=threading.Lock(); self._stop=threading.Event()
+        self._objects=None; self._force=False; self._last_run=0.0
+        self._lock=threading.Lock(); self._stop=threading.Event(); self._wake=threading.Event()
         self._thread=threading.Thread(target=self._run,daemon=True)
     def start(self): self._thread.start()
-    def submit_objects(self, objects):
-        with self._lock: self._objects=dict(objects)
-    def stop(self): self._stop.set(); self._thread.join(timeout=2)
+    def submit_objects(self, objects, force=False):
+        with self._lock:
+            self._objects=dict(objects)
+            self._force = self._force or bool(force)
+        if force: self._wake.set()
+    def stop(self): self._stop.set(); self._wake.set(); self._thread.join(timeout=2)
     def _run(self):
-        while not self._stop.wait(self.interval):
-            with self._lock: objects=self._objects
+        while not self._stop.is_set():
+            self._wake.wait(self.interval); self._wake.clear()
+            if self._stop.is_set(): break
+            with self._lock:
+                objects=self._objects
+                force=self._force
+                self._force=False
             if not objects: continue
+            now=time.time()
+            if force and now-self._last_run < 5.0: continue
             self.state.set_status(room_status="processing")
             try: room, conf=self._classify(objects)
             except Exception as exc:
                 self.state.set_status(room_status="error",room_error=str(exc)); print(f"[room detection] {exc}",flush=True)
-            else: self.state.set_status(room=room,room_confidence=conf,room_status="running",room_updated_at=time.time(),room_error="")
+            else:
+                self._last_run=time.time()
+                self.state.set_status(room=room,room_confidence=conf,room_status="running",room_updated_at=self._last_run,room_error="")
     def _classify(self, objects):
         prompt=(f"You are a deterministic room classifier. Detected object counts: {json.dumps(objects)}. "
                 "Choose the room best supported by the objects. Rules: bed, pillow, dresser or wardrobe strongly means bedroom; "

@@ -26,29 +26,54 @@ def _ollama(prompt:str,model:str,*,json_mode=False):
         with urllib.request.urlopen(req,timeout=20) as response: return json.loads(response.read()).get("response","").strip()
     except (OSError,urllib.error.URLError,json.JSONDecodeError): return None
 
-def _fallback_intent(text):
-    m=re.search(r"(?:when|where)\s+(?:was|were|is|did)\s+(?:the\s+)?(?:i\s+)?(.+?)\s+last\s+seen",text.lower())
-    if not m: m=re.search(r"last\s+seen\s+(?:the\s+)?(.+?)[?.!]*$",text.lower())
+def _direct_intent(text):
+    clean=" ".join(text.lower().strip().split())
+    if re.search(r"\b(?:thank\s+you|thanks|thank\s+u)\b",clean):
+        return {"intent":"thanks","object":""}
+    if re.search(r"\b(?:which|what)\s+room\s+(?:am\s+i|am\s+my|are\s+we)\s+in\b",clean):
+        return {"intent":"current_room","object":""}
+    if re.search(r"\b(?:which|what)\s+room\s+(?:is\s+this|is\s+it|this\s+is)\b",clean):
+        return {"intent":"current_room","object":""}
+    if re.search(r"\bwhere\s+(?:am\s+i|are\s+we)\b",clean) or "current room" in clean:
+        return {"intent":"current_room","object":""}
+    m=re.search(r"(?:when|where)\s+(?:was|were|is|did)\s+(?:the\s+|my\s+)?(.+?)\s+last\s+seen",clean)
+    if not m: m=re.search(r"last\s+seen\s+(?:the\s+|my\s+)?(.+?)[?.!]*$",clean)
+    if not m: m=re.search(r"where\s+(?:is|are)\s+(?:the\s+|my\s+)?(.+?)[?.!]*$",clean)
     if not m:return None
-    return {"intent":"last_seen","object":m.group(1).strip(" ?.! ").removeprefix("my ").strip()}
+    obj=m.group(1).strip(" ?.! ").removeprefix("my ").strip()
+    if obj in {"i","we","this room","the room","room"}: return None
+    return {"intent":"last_seen","object":obj}
 
 def _extract_intent(text,model):
-    raw=_ollama("Convert this request to JSON only: {\"intent\":\"last_seen\",\"object\":\"short label\"} or {\"intent\":\"unknown\",\"object\":\"\"}. Do not answer. Request: "+text,model,json_mode=True)
+    direct=_direct_intent(text)
+    if direct: return direct
+    raw=_ollama("Convert this request to JSON only: {\"intent\":\"last_seen\",\"object\":\"short label\"}, {\"intent\":\"current_room\",\"object\":\"\"}, or {\"intent\":\"unknown\",\"object\":\"\"}. Do not answer. Request: "+text,model,json_mode=True)
     if raw:
         try:
             d=json.loads(raw)
-            obj = str(d.get("object", "")).lower().strip()
-            if d.get("intent") == "last_seen" and obj and obj not in {"short label", "object", "the object"}:
-                return {"intent": "last_seen", "object": obj}
+            if d.get("intent")=="current_room": return {"intent":"current_room","object":""}
+            if d.get("intent")=="last_seen" and d.get("object"): return {"intent":"last_seen","object":str(d["object"]).lower().strip()}
         except json.JSONDecodeError: pass
-    return _fallback_intent(text)
+    return None
 
 def _last_seen_response(label,result):
     if result is None: return f"I have not seen the {label} yet."
-    return f"I last saw the {label} in the {result[3]} on {format_ist(result[0])}, with {result[1]:.0%} confidence."
+    return f"I last saw the {label} on {format_ist(result[0])}, with {result[1]:.0%} confidence."
 
-def answer(text,database=None,model="qwen2.5:0.5b-instruct"):
+def _current_room_response(snapshot):
+    if not snapshot: return "I am not sure which room you are in yet."
+    room=str(snapshot.get("room") or "unknown").strip().lower()
+    confidence=float(snapshot.get("room_confidence") or 0.0)
+    if not room or room=="unknown": return "I am not sure which room you are in yet."
+    if confidence>0: return f"I think you are in the {room}, with {confidence:.0%} confidence."
+    return f"I think you are in the {room}."
+
+def answer(text,database=None,state_snapshot=None,model="qwen2.5:0.5b-instruct"):
     intent=_extract_intent(text,model)
+    if intent and intent["intent"]=="thanks":
+        return "Your welcome, anytime."
+    if intent and intent["intent"]=="current_room":
+        return _current_room_response(state_snapshot)
     if database is not None and intent and intent["intent"]=="last_seen":
         # Do not ask the LLM to paraphrase factual memory data; it can invent rooms.
         return _last_seen_response(intent["object"],database.last_seen(intent["object"]))

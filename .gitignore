@@ -21,4 +21,6 @@ models/vosk-model-*/
 # Local backups made while live-testing on the Pi
 *.backup
 *.before-*
+*.before_*
 backup-*/
+.coverage

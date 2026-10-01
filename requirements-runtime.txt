@@ -1,0 +1,5 @@
+# VSGlasses runtime dependencies for Python 3.11.
+# Development tools such as pytest, Ruff, mypy, and coverage are excluded.
+
+numpy>=1.26,<3
+opencv-python>=4.10,<5

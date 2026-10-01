@@ -9,12 +9,13 @@ ALIASES = {
     "cell phone": "cell phone", "mobile phone": "cell phone", "phone": "cell phone",
     "television": "tv", "telly": "tv", "couch": "couch", "sofa": "couch",
     "laptop computer": "laptop", "computer": "laptop", "back pack": "backpack",
+    "clock": "watch", "wrist watch": "watch", "watch": "watch",
 }
 
 @dataclass(frozen=True)
 class ObjectObservation:
     frame_id: int; label: str; confidence: float
-    x1: float; y1: float; x2: float; y2: float; observed_at: str; room: str = 'unknown'
+    x1: float; y1: float; x2: float; y2: float; observed_at: str
 
 class ObjectDatabase:
     def __init__(self, path: str | Path = "data/object_observations.sqlite3") -> None:
@@ -31,16 +32,19 @@ class ObjectDatabase:
     def last_seen(self,label: str):
         requested=self._canonical(label)
         with sqlite3.connect(self.path) as c:
-            row=c.execute("SELECT last_seen_at,confidence,x1,y1,x2,y2,room FROM objects WHERE label=? COLLATE NOCASE",(requested,)).fetchone()
+            row=c.execute("SELECT last_seen_at,confidence,x1,y1,x2,y2 FROM objects WHERE label=? COLLATE NOCASE",(requested,)).fetchone()
             if row is None:
                 # Match a descriptive phrase to a stored canonical COCO label.
                 candidates=c.execute("SELECT label,last_seen_at,confidence,x1,y1,x2,y2 FROM objects").fetchall()
                 words=set(requested.split())
                 for candidate in candidates:
-                    stored_words=set(candidate[0].lower().split())
-                    if candidate[0].lower() in requested or stored_words & words:
+                    stored_label = candidate[0].lower()
+                    stored_words=set(stored_label.split())
+                    if stored_label == "clock" and requested == "watch":
                         row=candidate[1:]; break
-        return None if row is None else (row[0],float(row[1]),tuple(float(v) for v in row[2:6]), row[6] or 'unknown')
+                    if stored_label in requested or stored_words & words:
+                        row=candidate[1:]; break
+        return None if row is None else (row[0],float(row[1]),tuple(float(v) for v in row[2:6]))
     def close(self) -> None:
         self._queue.put(None); self._thread.join(timeout=3)
     def _writer(self) -> None:
@@ -56,5 +60,5 @@ class ObjectDatabase:
             while True:
                 item=self._queue.get()
                 if item is None: break
-                c.execute("""INSERT INTO objects VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(label) DO UPDATE SET last_seen_at=excluded.last_seen_at,last_frame_id=excluded.last_frame_id,confidence=excluded.confidence,x1=excluded.x1,y1=excluded.y1,x2=excluded.x2,y2=excluded.y2,room=excluded.room""",(item.label,item.observed_at,item.observed_at,item.frame_id,item.confidence,item.x1,item.y1,item.x2,item.y2,item.room))
+                c.execute("""INSERT INTO objects VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(label) DO UPDATE SET last_seen_at=excluded.last_seen_at,last_frame_id=excluded.last_frame_id,confidence=excluded.confidence,x1=excluded.x1,y1=excluded.y1,x2=excluded.x2,y2=excluded.y2""",(item.label,item.observed_at,item.observed_at,item.frame_id,item.confidence,item.x1,item.y1,item.x2,item.y2))
                 c.execute("INSERT INTO object_sightings(frame_id,label,confidence,x1,y1,x2,y2,observed_at) VALUES(?,?,?,?,?,?,?,?)",(item.frame_id,item.label,item.confidence,item.x1,item.y1,item.x2,item.y2,item.observed_at)); c.commit()

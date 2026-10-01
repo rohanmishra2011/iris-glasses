@@ -1,0 +1,31 @@
+threshold,image_trial,actual_objects,detected_objects,true_positives,false_positives,false_negatives,tp,fp,fn
+0.4,1,"bottle, chair, laptop, phone","bottle, chair, laptop, phone","bottle, chair, laptop, phone",,,4,0,0
+0.4,2,"couch, dining table","chair, couch",couch,chair,dining table,1,1,1
+0.4,3,"book, couch, person, tv","bed, book, person, tv","book, person, tv",bed,couch,3,1,1
+0.4,4,"chair, microwave","chair, couch, microwave","chair, microwave",couch,,2,1,0
+0.4,5,"bottle, sink","bottle, oven, person, refrigerator, sink","bottle, sink","oven, person, refrigerator",,2,3,0
+0.4,6,"bed, chair, person, teddy bear, tv","bed, chair, person, tv","bed, chair, person, tv",,teddy bear,4,0,1
+0.4,7,"bed, book",bed,bed,,book,1,0,1
+0.4,8,"bed, book, person","bed, book, person","bed, book, person",,,3,0,0
+0.4,9,"bed, chair","bed, chair","bed, chair",,,2,0,0
+0.4,10,"book, desk",tv,,tv,"book, desk",0,1,2
+0.6,1,"bed, book, person",bed,bed,,"book, person",1,0,2
+0.6,2,"book, desk",,,,"book, desk",0,0,2
+0.6,3,"bed, orange, tv","bed, orange","bed, orange",,tv,2,0,1
+0.6,4,"book, clock",,,,"book, clock",0,0,2
+0.6,5,"bottle, chair, dining table, laptop, phone","chair, refrigerator",chair,refrigerator,"bottle, dining table, laptop, phone",1,1,4
+0.6,6,"bottle, sink",bottle,bottle,,sink,1,0,1
+0.6,7,"oven, refrigerator","oven, refrigerator","oven, refrigerator",,,2,0,0
+0.6,8,"couch, dining table",couch,couch,,dining table,1,0,1
+0.6,9,"chair, dining table, microwave","chair, microwave","chair, microwave",,dining table,2,0,1
+0.6,10,"chair, cup, person","cup, person","cup, person",,chair,2,0,1
+0.8,1,"chair, cup, person","cup, person","cup, person",,chair,2,0,1
+0.8,2,"chair, cup, microwave, refrigerator",,,,"chair, cup, microwave, refrigerator",0,0,4
+0.8,3,"bottle, chair, laptop, phone",,,,"bottle, chair, laptop, phone",0,0,4
+0.8,4,"person, sink",person,person,,sink,1,0,1
+0.8,5,"oven, refrigerator",refrigerator,refrigerator,,oven,1,0,1
+0.8,6,"couch, dining table",,,,"couch, dining table",0,0,2
+0.8,7,"book, bottle, couch, tv",tv,tv,,"book, bottle, couch",1,0,3
+0.8,8,"chair, cup",cup,cup,,chair,1,0,1
+0.8,9,chair,chair,chair,,,1,0,0
+0.8,10,"chair, person",person,person,,chair,1,0,1

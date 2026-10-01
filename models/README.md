@@ -1,14 +1,11 @@
 # Model files
 
-The repository stores code and lightweight configuration only. Downloaded model
-binaries are intentionally excluded from GitHub.
+Large model binaries are intentionally not committed to GitHub.
 
-Expected local model files on the Raspberry Pi:
+Expected local deployment files:
 
-- `yolo11n.pt` in the project root for YOLO object detection.
-- `models/vosk-model-small-en-us-0.15/` for offline speech-to-text.
-- `models/en_US-lessac-medium.onnx` for Piper text-to-speech.
-- `models/en_US-lessac-medium.onnx.json` for the Piper voice configuration.
+- `yolo11n.pt` for YOLO11n object detection
+- `en_US-lessac-medium.onnx` for Piper speech output
+- `vosk-model-small-en-us-0.15/` for offline speech recognition
 
-The Pi currently has these files installed locally; they are not committed
-because they are large third-party binaries.
+The small Piper JSON config is committed because it is lightweight and useful for deployment. Downloaded model weights should stay local on the Raspberry Pi or development machine.

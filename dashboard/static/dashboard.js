@@ -18,9 +18,30 @@ async function refresh() {
       ? `${state.supply_voltage_v.toFixed(3)} V` : "--";
     byId("power-status").textContent = humanStatus(state.power_status);
     byId("imu-status").textContent = humanStatus(state.imu_status);
+    byId("imu-mount").textContent = state.imu_mount || "waist";
     byId("imu-address").textContent = state.imu_address || "--";
+    byId("imu-motion").textContent = humanStatus(state.imu_motion_state);
+    byId("imu-steps").textContent = Number.isFinite(state.imu_step_count)
+      ? String(state.imu_step_count) : "0";
+    byId("imu-step-rate").textContent = Number.isFinite(state.imu_step_rate_hz)
+      ? `${state.imu_step_rate_hz.toFixed(2)} Hz` : "--";
     byId("imu-accel").textContent = formatAxes(state.imu_accel_g, 3);
+    byId("imu-accel-mag").textContent = Number.isFinite(state.imu_accel_magnitude_g)
+      ? `${state.imu_accel_magnitude_g.toFixed(3)} g` : "--";
+    byId("imu-linear-accel").textContent = Number.isFinite(state.imu_linear_accel_g)
+      ? `${state.imu_linear_accel_g.toFixed(3)} g` : "--";
     byId("imu-gyro").textContent = formatAxes(state.imu_gyro_dps, 2);
+    byId("imu-yaw-rate").textContent = Number.isFinite(state.imu_yaw_rate_dps)
+      ? `${state.imu_yaw_rate_dps.toFixed(1)} °/s` : "--";
+    byId("imu-heading").textContent = Number.isFinite(state.imu_heading_delta_deg)
+      ? `${state.imu_heading_delta_deg.toFixed(1)}°` : "--";
+    byId("imu-turn").textContent = state.imu_turn_direction
+      ? `${state.imu_turn_direction} (${Number(state.imu_turn_angle_deg || 0).toFixed(0)}°)`
+      : "--";
+    byId("imu-turn-progress").textContent = Number.isFinite(state.imu_turn_progress_deg)
+      ? `${state.imu_turn_progress_deg.toFixed(1)}°` : "--";
+    byId("imu-transition").textContent = state.imu_room_transition_likely
+      ? "likely" : "no";
     byId("imu-temperature").textContent = Number.isFinite(state.imu_temperature_c)
       ? `${state.imu_temperature_c.toFixed(1)} °C` : "--";
     byId("imu-error").textContent = state.imu_error || "";

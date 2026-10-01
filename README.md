@@ -1,60 +1,66 @@
-# VSGlasses
+# PUPIL / IRIS Smart Glasses
 
-VSGlasses is a Raspberry Pi–compatible smart-glasses project for contextual memory support for people living with Alzheimer’s disease and other forms of dementia. It is not intended to replace a caregiver, diagnose a condition, or provide blind-navigation assistance.
+PUPIL is an offline Raspberry Pi 5 smart-glasses prototype for object-memory support during early cognitive decline. It uses a glasses-mounted webcam, YOLO11n object detection, a waist-mounted MPU6050 IMU, local SQLite memory, Vosk speech-to-text, Qwen2.5 0.5B fallback query logic, and Piper text-to-speech.
 
-## Current state
+The system is designed to answer questions such as “PUPIL, where is my phone?” without sending indoor camera, voice, or memory data to the cloud.
 
-The project has intentionally been reset to one small, testable baseline:
-
-- OpenCV camera capture and live preview;
-- YOLO11n live object detection;
-- `q` exits the preview;
-- no speech, SQL database, face recognition, room mapping or Ollama runtime yet.
-
-The only active runtime entry point is `main.py`:
-
-```bash
-source .venv/bin/activate
-python main.py
-```
-
-Install the detector dependency if needed:
-
-```bash
-python -m pip install ultralytics opencv-python
-```
-
-The first run may download `yolo11n.pt`. A desktop run is not Raspberry Pi validation: measure FPS, latency, memory, heat and power on the target Pi.
-
-## Planned capabilities
-
-1. Conservative live facial recognition with consent-based enrollment.
-2. A local memory store for people, objects, observations, timestamps and confidence.
-3. “Where was this object last seen?” retrieval based on confirmed observations.
-4. Autonomous house/room mapping using camera motion, an IMU and future SLAM.
-5. Object positions anchored to the map and updated over time.
-6. Voice input and output, added only after the visual baseline is stable.
-
-The future system should save structured events rather than every frame. It must distinguish “last observed” from “currently located,” expose uncertainty, and ask for confirmation before saving important memories or enrolling a person. Faces, voices, locations and memory records are sensitive data and should remain local by default.
-
-## Rules for future agents
-
-- Raspberry Pi compatibility is a primary constraint: prefer small offline models, low RAM use and Raspberry Pi OS-compatible dependencies.
-- One model must have one clearly defined job. Do not add Ollama or a second detector to the live loop without measured justification.
-- Keep OpenCV GUI work on the main thread. Move blocking inference, audio or database work off that thread when later modules require it.
-- Do not claim medical benefit, reliable identity or exact object location without testing and confidence handling.
-- Add one module at a time and verify it on target hardware.
-- Report hardware tests separately from syntax checks or reasoning.
-
-## Future architecture
+## Repository structure
 
 ```text
-Camera + IMU
-    -> fast visual perception
-    -> structured observations with timestamps/confidence
-    -> local memory and map
-    -> consent-aware assistance layer
-    -> optional voice output
+.
+├── main.py                     # Main runtime loop
+├── imu.py                      # MPU6050 walking / turn / room-transition logic
+├── nlp.py                      # Voice-command intent handling and memory answers
+├── object_database.py          # Local SQLite object memory
+├── stt.py                      # Vosk wake-word and speech recognition
+├── tts.py                      # Piper speech output
+├── vision_context.py           # Room-context inference from detected objects
+├── shared_state.py             # Live shared system state
+├── system_health.py            # Pi system metrics
+├── dashboard/                  # Local browser monitor
+├── configs/                    # Runtime configuration files
+├── docs/                       # Architecture, testing, safety and roadmap notes
+├── hardware/3d-models/         # 3D-printable prototype enclosure files
+├── models/                     # Model setup notes and small config files only
+├── results/                    # Graphs and CSVs used in project evaluation
+└── tools/                      # Testing and graph-generation scripts
 ```
 
-The next milestone is proving that YOLO11n and OpenCV run reliably on the Raspberry Pi with acceptable latency and power use. Only then should facial recognition and the memory/map system be added.
+## Hardware
+
+- Raspberry Pi 5
+- Logitech C270 webcam / microphone
+- MPU6050 waist-mounted IMU
+- MAX98357A I2S amplifier
+- 4Ω speaker
+- Power bank
+- 3D-printed glasses / electronics enclosure
+
+The STL files for the current prototype are in `hardware/3d-models/`.
+
+## Runtime
+
+On the Raspberry Pi:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements-pi.txt
+./run_pi.sh
+```
+
+The local dashboard can be run separately from `dashboard/server.py` and viewed from the Pi’s local network address.
+
+## Model files
+
+Large model binaries are intentionally not committed to GitHub. Place them locally when deploying:
+
+- `models/yolo11n.pt`
+- `models/en_US-lessac-medium.onnx`
+- `models/vosk-model-small-en-us-0.15/`
+
+Small model configuration files, setup notes, and reproducible testing code are included.
+
+## Privacy and safety
+
+PUPIL is a research prototype, not a medical device. It does not diagnose dementia, replace a caregiver, or guarantee exact object location. The main privacy design choice is that object detection, speech processing, memory lookup, and response generation run locally on the device.

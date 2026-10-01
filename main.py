@@ -2,7 +2,6 @@
 import argparse
 import os
 import time
-import threading
 from datetime import datetime, timezone
 
 import cv2
@@ -60,7 +59,6 @@ def main() -> None:
     database = ObjectDatabase()
     listener = None
     speech = PiperSpeech() if args.tts else None
-    speech_lock = threading.Lock()
     if not args.no_voice:
         def handle_command(command: str) -> None:
             state.set_status(
@@ -70,24 +68,16 @@ def main() -> None:
                 last_command_at=datetime.now(timezone.utc).isoformat(),
             )
             try:
-                response = answer(command, database)
+                response = answer(command, database, state.snapshot())
             except Exception as exc:
                 response = "I could not process that command offline."
                 state.set_status(voice_status="error")
                 print(f"[voice command] {exc}", flush=True)
             else:
                 state.set_status(voice_status="listening")
-            print(f"[nlp response] {response}", flush=True)
             state.set_status(last_response=response)
             if speech is not None:
-                with speech_lock:
-                    if listener is not None:
-                        listener.mute()
-                    try:
-                        speech.speak(response)
-                    finally:
-                        if listener is not None:
-                            listener.unmute()
+                speech.speak(response)
 
         try:
             listener = WakeWordListener("models/vosk-model-small-en-us-0.15")
@@ -102,12 +92,14 @@ def main() -> None:
     camera = None
     next_camera_retry = 0.0
     frame_id = 0
+    last_room_turn_event_id = 0
     try:
         while True:
             if camera is None:
                 if time.monotonic() >= next_camera_retry:
                     state.set_status(camera="opening")
                     candidate = cv2.VideoCapture(args.camera, cv2.CAP_V4L2)
+                    candidate.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
                     candidate.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
                     candidate.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
                     candidate.set(cv2.CAP_PROP_FPS, 30)
@@ -151,21 +143,38 @@ def main() -> None:
                 result.boxes.xyxy.tolist(), result.boxes.conf.tolist(),
                 result.boxes.cls.tolist(), strict=True
             ):
-                label = result.names[int(class_id)]
+                raw_label = result.names[int(class_id)]
+                label = "watch" if raw_label == "clock" else raw_label
+                if raw_label == "clock":
+                    result.names[int(class_id)] = "watch"
                 object_counts[label] = object_counts.get(label, 0) + 1
                 database.record(ObjectObservation(
                     frame_id, label, float(confidence),
-                    *map(float, box), observed_at, state.snapshot().get("room", "unknown")
+                    *map(float, box), observed_at
                 ))
                 detections.append({
                     "label": label,
                     "confidence": float(confidence),
                     "box": [float(value) for value in box],
                 })
+            snapshot = state.snapshot()
+            turn_event_id = int(snapshot.get("imu_turn_event_id") or 0)
+            force_room_update = (
+                turn_event_id != last_room_turn_event_id
+                and bool(snapshot.get("imu_room_transition_likely"))
+            )
+            if force_room_update:
+                last_room_turn_event_id = turn_event_id
+                print(
+                    "[imu] room transition likely after "
+                    f"{snapshot.get('imu_turn_direction') or 'unknown'} turn; "
+                    "refreshing room label",
+                    flush=True,
+                )
             if room_worker is not None:
-                room_worker.submit_objects(object_counts)
+                room_worker.submit_objects(object_counts, force=force_room_update)
             display = result.plot()
-            room = state.snapshot()["room"]
+            room = snapshot["room"]
             cv2.putText(
                 display, f"Room: {room}", (12, 28), cv2.FONT_HERSHEY_SIMPLEX,
                 0.7, (0, 180, 0), 2,
