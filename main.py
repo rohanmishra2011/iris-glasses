@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import threading
 import time
 from datetime import datetime, timezone
@@ -52,6 +53,46 @@ def clean_phrase(text: str | None) -> str:
     if not text:
         return ""
     return " ".join(text.strip(" ,.!?").split())
+
+
+def _normalise_command(text: str) -> str:
+    clean = text.lower()
+    replacements = {
+        "what's": "what is",
+        "whats": "what is",
+        "that's": "that is",
+        "thats": "that is",
+        "recognise": "recognize",
+        "memorise": "memorize",
+    }
+    for source, target in replacements.items():
+        clean = clean.replace(source, target)
+    clean = re.sub(r"[^\w\s']", " ", clean)
+    return " ".join(clean.split())
+
+
+def _scan_intent(command: str) -> str | None:
+    clean = _normalise_command(command)
+    object_patterns = (
+        r"\bscan\s+(?:this|the|my)?\s*(?:object|item|thing|one)?\b",
+        r"\b(?:save|remember|learn|memorize|enrol|enroll)\s+(?:this|the|my)?\s*(?:object|item|thing|one)\b",
+        r"\b(?:add|store)\s+(?:this|the|my)?\s*(?:object|item|thing|one)\s+(?:to\s+memory|as\s+personal)?\b",
+        r"\bthis\s+is\s+(?:my|a|an)\s+.+\b",
+        r"\b(?:name|label)\s+(?:this|the|my)?\s*(?:object|item|thing|one)\b",
+        r"\b(?:personal|private)\s+(?:object|item)\b",
+    )
+    room_patterns = (
+        r"\bscan\s+(?:this|the|my)?\s*room\b",
+        r"\b(?:save|remember|learn|memorize|enrol|enroll)\s+(?:this|the|my)?\s*room\b",
+        r"\b(?:add|store)\s+(?:this|the|my)?\s*room\s+(?:to\s+memory|as\s+location)?\b",
+        r"\b(?:map|profile|register)\s+(?:this|the|my)?\s*room\b",
+        r"\broom\s+(?:scan|learning|enrolment|enrollment|profile)\b",
+    )
+    if any(re.search(pattern, clean) for pattern in room_patterns):
+        return "room"
+    if any(re.search(pattern, clean) for pattern in object_patterns):
+        return "object"
+    return None
 
 
 def main() -> None:
@@ -159,11 +200,11 @@ def main() -> None:
                 last_response="",
                 last_command_at=datetime.now(timezone.utc).isoformat(),
             )
-            clean = command.lower().strip()
+            scan_intent = _scan_intent(command)
             try:
-                if "scan this object" in clean or "scan object" in clean:
+                if scan_intent == "object":
                     response = scan_object_command(listener, speech)
-                elif "scan this room" in clean or "scan room" in clean:
+                elif scan_intent == "room":
                     response = scan_room_command(listener, speech)
                 else:
                     response = answer(command, database, state.snapshot())

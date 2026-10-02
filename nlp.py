@@ -33,10 +33,15 @@ def _normalise_text(text):
         "wheres": "where is",
         "what's": "what is",
         "whats": "what is",
+        "who's": "who is",
+        "hows": "how is",
         "where’d": "where did",
         "where'd": "where did",
         "can’t": "cannot",
         "can't": "cannot",
+        "dont": "do not",
+        "doesnt": "does not",
+        "isnt": "is not",
     }
     for source, target in replacements.items():
         clean = clean.replace(source, target)
@@ -46,8 +51,10 @@ def _normalise_text(text):
 def _clean_object_phrase(obj):
     obj = " ".join(obj.lower().strip(" ?.!,'\"").split())
     obj = re.sub(r"^(?:the|my|a|an|this|that|those|these|one of my)\s+", "", obj)
-    obj = re.sub(r"\s+(?:please|pls|now|right now|again|for me)$", "", obj)
-    obj = re.sub(r"\s+(?:last|last time|recently|before)$", "", obj)
+    obj = re.sub(r"\s+(?:please|pls|now|right now|again|for me|for us)$", "", obj)
+    obj = re.sub(r"\s+(?:last|last time|recently|before|today|yesterday)$", "", obj)
+    obj = re.sub(r"\s+(?:is|are|was|were|at|located|kept|placed|left)$", "", obj)
+    obj = re.sub(r"^(?:lost|missing|misplaced)\s+", "", obj)
     obj = obj.removeprefix("my ").strip()
     if obj in {"", "i", "me", "we", "us", "this room", "the room", "room", "it"}:
         return ""
@@ -61,25 +68,38 @@ def _direct_intent(text):
         return {"intent":"current_room","object":""}
     if re.search(r"\b(?:which|what)\s+room\s+(?:is\s+this|is\s+it|this\s+is)\b",clean):
         return {"intent":"current_room","object":""}
-    if re.search(r"\bwhere\s+(?:am\s+i|are\s+we)\b",clean) or "current room" in clean:
+    if (
+        re.search(r"\bwhere\s+(?:am\s+i|are\s+we)\b",clean)
+        or re.search(r"\b(?:tell\s+me\s+)?(?:my\s+)?current\s+room\b",clean)
+        or re.search(r"\bwhat\s+room\s+(?:are\s+we|we\s+in)\b",clean)
+    ):
         return {"intent":"current_room","object":""}
 
     object_patterns = (
+        r"\b(?:what|where)\s+is\s+the\s+(?:last\s+)?(?:location|place|room|position)\s+(?:of|for)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
+        r"\b(?:location|place|room|position)\s+(?:of|for)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
+        r"\btell\s+me\s+the\s+(?:last\s+)?(?:location|room|place)\s+(?:of|for)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
+        r"\b(?:do\s+you\s+remember|can\s+you\s+remember)\s+(?:the\s+)?(?:last\s+)?(?:location|room|place)\s+(?:of|for)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
         r"\b(?:where|when)\s+(?:was|were|is|are|did)\s+(?:the\s+|my\s+)?(?P<object>.+?)\s+last\s+(?:seen|detected|found|noticed|spotted)\b",
         r"\blast\s+(?:seen|detected|found|noticed|spotted)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
         r"\b(?:where|when)\s+did\s+(?:you|pupil)\s+last\s+(?:see|detect|find|notice|spot)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
         r"\b(?:have|did)\s+you\s+(?:seen|see|detected|detect|found|find|noticed|notice|spotted|spot)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
+        r"\b(?:have|did)\s+(?:we|i)\s+(?:seen|see|detected|detect|found|find|noticed|notice|spotted|spot)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
         r"\b(?:do\s+you\s+know\s+)?where\s+(?:is|are)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
-        r"\b(?:can\s+you\s+tell\s+me\s+)?where\s+(?:is|are)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
-        r"\b(?:please\s+)?(?:find|locate|look\s+for|search\s+for)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
+        r"\b(?:can|could|will|would)\s+you\s+(?:please\s+)?(?:tell\s+me|check|remember|recall|look\s+up|search)\s+where\s+(?:is|are)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
+        r"\b(?:can|could|will|would)\s+you\s+(?:please\s+)?(?:find|locate|look\s+for|search\s+for|track)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
+        r"\b(?:please\s+)?(?:find|locate|look\s+for|search\s+for|track|look\s+up)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
         r"\b(?:help\s+me\s+)?(?:find|locate)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
         r"\bwhat\s+room\s+(?:is|are)\s+(?:the\s+|my\s+)?(?P<object>.+?)\s+in\b",
         r"\bwhich\s+room\s+(?:is|are)\s+(?:the\s+|my\s+)?(?P<object>.+?)\s+in\b",
+        r"\b(?:is|are)\s+(?:the\s+|my\s+)?(?P<object>.+?)\s+in\s+(?:this|the)\s+room\b",
         r"\b(?:where)\s+did\s+i\s+(?:put|leave|keep|place|set|drop)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
         r"\b(?:where)\s+(?:have|did)\s+i\s+(?:put|left|leave|kept|keep|placed|place|set|dropped|drop)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
-        r"\b(?:what|where)\s+is\s+the\s+(?:last\s+)?(?:location|place|room)\s+(?:of|for)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
+        r"\b(?:i\s+)?(?:lost|misplaced|cannot\s+find|do\s+not\s+know\s+where)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
+        r"\b(?:the\s+|my\s+)?(?P<object>.+?)\s+(?:is|are)\s+(?:lost|missing|misplaced)\b",
+        r"\b(?:the\s+|my\s+)?(?P<object>.+?)\s+(?:location|place|room|position)\b",
         r"\btell\s+me\s+(?:where|when)\s+(?:the\s+|my\s+)?(?P<object>.+?)\s+(?:was|were|is|are)\s+last\s+(?:seen|detected|found)\b",
-        r"\btell\s+me\s+the\s+(?:last\s+)?(?:location|room|place)\s+(?:of|for)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
+        r"\b(?:remember|recall)\s+where\s+(?:the\s+|my\s+)?(?P<object>.+?)\s+(?:is|are|was|were)?\b",
         r"\b(?:where)\s+(?:my|the)\s+(?P<object>.+)$",
     )
     obj = ""
