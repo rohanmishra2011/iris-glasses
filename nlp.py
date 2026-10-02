@@ -26,8 +26,35 @@ def _ollama(prompt:str,model:str,*,json_mode=False):
         with urllib.request.urlopen(req,timeout=20) as response: return json.loads(response.read()).get("response","").strip()
     except (OSError,urllib.error.URLError,json.JSONDecodeError): return None
 
+def _normalise_text(text):
+    clean = text.lower()
+    replacements = {
+        "where's": "where is",
+        "wheres": "where is",
+        "what's": "what is",
+        "whats": "what is",
+        "where’d": "where did",
+        "where'd": "where did",
+        "can’t": "cannot",
+        "can't": "cannot",
+    }
+    for source, target in replacements.items():
+        clean = clean.replace(source, target)
+    clean = re.sub(r"[^\w\s']", " ", clean)
+    return " ".join(clean.split())
+
+def _clean_object_phrase(obj):
+    obj = " ".join(obj.lower().strip(" ?.!,'\"").split())
+    obj = re.sub(r"^(?:the|my|a|an|this|that|those|these|one of my)\s+", "", obj)
+    obj = re.sub(r"\s+(?:please|pls|now|right now|again|for me)$", "", obj)
+    obj = re.sub(r"\s+(?:last|last time|recently|before)$", "", obj)
+    obj = obj.removeprefix("my ").strip()
+    if obj in {"", "i", "me", "we", "us", "this room", "the room", "room", "it"}:
+        return ""
+    return obj
+
 def _direct_intent(text):
-    clean=" ".join(text.lower().strip().split())
+    clean=_normalise_text(text)
     if re.search(r"\b(?:thank\s+you|thanks|thank\s+u)\b",clean):
         return {"intent":"thanks","object":""}
     if re.search(r"\b(?:which|what)\s+room\s+(?:am\s+i|am\s+my|are\s+we)\s+in\b",clean):
@@ -36,12 +63,32 @@ def _direct_intent(text):
         return {"intent":"current_room","object":""}
     if re.search(r"\bwhere\s+(?:am\s+i|are\s+we)\b",clean) or "current room" in clean:
         return {"intent":"current_room","object":""}
-    m=re.search(r"(?:when|where)\s+(?:was|were|is|did)\s+(?:the\s+|my\s+)?(.+?)\s+last\s+seen",clean)
-    if not m: m=re.search(r"last\s+seen\s+(?:the\s+|my\s+)?(.+?)[?.!]*$",clean)
-    if not m: m=re.search(r"where\s+(?:is|are)\s+(?:the\s+|my\s+)?(.+?)[?.!]*$",clean)
-    if not m:return None
-    obj=m.group(1).strip(" ?.! ").removeprefix("my ").strip()
-    if obj in {"i","we","this room","the room","room"}: return None
+
+    object_patterns = (
+        r"\b(?:where|when)\s+(?:was|were|is|are|did)\s+(?:the\s+|my\s+)?(?P<object>.+?)\s+last\s+(?:seen|detected|found|noticed|spotted)\b",
+        r"\blast\s+(?:seen|detected|found|noticed|spotted)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
+        r"\b(?:where|when)\s+did\s+(?:you|pupil)\s+last\s+(?:see|detect|find|notice|spot)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
+        r"\b(?:have|did)\s+you\s+(?:seen|see|detected|detect|found|find|noticed|notice|spotted|spot)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
+        r"\b(?:do\s+you\s+know\s+)?where\s+(?:is|are)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
+        r"\b(?:can\s+you\s+tell\s+me\s+)?where\s+(?:is|are)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
+        r"\b(?:please\s+)?(?:find|locate|look\s+for|search\s+for)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
+        r"\b(?:help\s+me\s+)?(?:find|locate)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
+        r"\bwhat\s+room\s+(?:is|are)\s+(?:the\s+|my\s+)?(?P<object>.+?)\s+in\b",
+        r"\bwhich\s+room\s+(?:is|are)\s+(?:the\s+|my\s+)?(?P<object>.+?)\s+in\b",
+        r"\b(?:where)\s+did\s+i\s+(?:put|leave|keep|place|set|drop)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
+        r"\b(?:where)\s+(?:have|did)\s+i\s+(?:put|left|leave|kept|keep|placed|place|set|dropped|drop)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
+        r"\b(?:what|where)\s+is\s+the\s+(?:last\s+)?(?:location|place|room)\s+(?:of|for)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
+        r"\btell\s+me\s+(?:where|when)\s+(?:the\s+|my\s+)?(?P<object>.+?)\s+(?:was|were|is|are)\s+last\s+(?:seen|detected|found)\b",
+        r"\btell\s+me\s+the\s+(?:last\s+)?(?:location|room|place)\s+(?:of|for)\s+(?:the\s+|my\s+)?(?P<object>.+)$",
+        r"\b(?:where)\s+(?:my|the)\s+(?P<object>.+)$",
+    )
+    obj = ""
+    for pattern in object_patterns:
+        match = re.search(pattern, clean)
+        if match:
+            obj = _clean_object_phrase(match.group("object"))
+            break
+    if not obj:return None
     return {"intent":"last_seen","object":obj}
 
 def _extract_intent(text,model):
