@@ -58,7 +58,11 @@ def _extract_intent(text,model):
 
 def _last_seen_response(label,result):
     if result is None: return f"I have not seen the {label} yet."
-    return f"I last saw the {label} on {format_ist(result[0])}, with {result[1]:.0%} confidence."
+    room = result[3] if len(result) > 3 else "unknown"
+    stored_label = result[4] if len(result) > 4 else label
+    if room and room != "unknown":
+        return f"I last saw the {stored_label} in the {room} on {format_ist(result[0])}, with {result[1]:.0%} confidence."
+    return f"I last saw the {stored_label} on {format_ist(result[0])}, with {result[1]:.0%} confidence."
 
 def _current_room_response(snapshot):
     if not snapshot: return "I am not sure which room you are in yet."

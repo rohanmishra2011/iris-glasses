@@ -11,6 +11,7 @@ __pycache__/
 data/*.sqlite3*
 outputs/*.log
 outputs/*.pid
+logs/*.csv
 
 # Downloaded model binaries are intentionally not committed.
 # See models/README.md for setup.

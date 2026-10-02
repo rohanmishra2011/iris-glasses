@@ -1,6 +1,41 @@
 [application]
 log_level = "INFO"
 
+[tuning]
+test_mode = false
+
+# Personal object matching
+match_threshold = 0.60
+object_match_min_interval_seconds = 1.0
+object_scan_crop_count = 5
+object_scan_seconds = 2.0
+personal_crop_size = 128
+hsv_h_bins = 30
+hsv_s_bins = 32
+orb_features = 500
+orb_ratio = 0.75
+orb_min_keypoints = 10
+
+# Room scanning and recognition
+room_scan_seconds = 15.0
+room_fingerprint_window_seconds = 10.0
+room_landmark_min_fraction = 0.20
+room_threshold = 0.50
+room_margin = 0.10
+room_timer_seconds = 30.0
+room_imu_delay_seconds = 5.0
+
+# IMU room-transition trigger
+imu_sample_hz = 20.0
+imu_calibration_seconds = 2.0
+imu_step_threshold_g = 0.16
+imu_step_refractory_seconds = 0.30
+imu_turn_rate_threshold_dps = 35.0
+imu_transition_steps = 4
+imu_transition_yaw_deg = 55.0
+imu_transition_window_seconds = 10.0
+imu_transition_cooldown_seconds = 5.0
+
 [camera]
 enabled = true
 required = false
